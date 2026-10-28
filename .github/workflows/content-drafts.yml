@@ -7,14 +7,24 @@ on:
         required: true
         type: choice
         options: [seo, note-free, note-paid]
+  schedule:
+    - cron: '20 1 * * 1'
 permissions:
   contents: write
   pull-requests: write
+concurrency:
+  group: content-draft
+  cancel-in-progress: false
 jobs:
   generate:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
+      - name: Protect paid note content
+        if: inputs.content_kind == 'note-paid'
+        run: |
+          echo 'Paid note drafts must not be committed to a public repository. Use a private content repository.'
+          exit 1
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -25,17 +35,18 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CONTENT_KIND: ${{ inputs.content_kind }}
+          CONTENT_KIND: ${{ github.event_name == 'schedule' && 'seo' || inputs.content_kind }}
         run: python scripts/generate.py
       - name: Open draft PR (no automatic publishing)
         env:
           GH_TOKEN: ${{ github.token }}
+          CONTENT_KIND: ${{ github.event_name == 'schedule' && 'seo' || inputs.content_kind }}
         run: |
-          BRANCH="draft/${{ inputs.content_kind }}-${{ github.run_id }}"
+          BRANCH="draft/${CONTENT_KIND}-${{ github.run_id }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
           git add drafts/
-          git commit -m "draft: ${{ inputs.content_kind }} content"
+          git commit -m "draft: ${CONTENT_KIND} content"
           git push origin "$BRANCH"
-          gh pr create --draft --base main --head "$BRANCH" --title "Review: ${{ inputs.content_kind }} article" --body "AI下書きです。事実・機密・権利・SEO・有料境界を確認してください。マージだけでは記事は公開されません。"
+          gh pr create --draft --base main --head "$BRANCH" --title "Review: ${CONTENT_KIND} article" --body "AI下書きです。事実・機密・権利・SEO・有料境界を確認してください。マージだけでは記事は公開されません。"
