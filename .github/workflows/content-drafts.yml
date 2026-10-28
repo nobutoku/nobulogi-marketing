@@ -20,6 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
+      - name: Protect paid note content
+        if: inputs.content_kind == 'note-paid'
+        run: |
+          echo 'Paid note drafts must not be committed to a public repository. Use a private content repository.'
+          exit 1
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
