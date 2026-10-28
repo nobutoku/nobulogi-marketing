@@ -21,7 +21,7 @@ def main():
     client=OpenAI()
     draft=client.responses.create(model=os.environ.get("OPENAI_MODEL","gpt-4.1-mini"),input=prompt,max_output_tokens=2200).output_text
     reviewer=Anthropic()
-    review=reviewer.messages.create(model=os.environ.get("ANTHROPIC_MODEL","claude-sonnet-4-5"),max_tokens=1100,messages=[{"role":"user","content":"以下の記事を事実性、誇大表現、機密、読者への実用性、未検証の断定について日本語でレビュー。修正箇所と理由を箇条書き。\n\n"+draft}])
+    review=reviewer.messages.create(model=os.environ.get("ANTHROPIC_MODEL","claude-sonnet-4-6"),max_tokens=1100,messages=[{"role":"user","content":"以下の記事を事実性、誇大表現、機密、読者への実用性、未検証の断定について日本語でレビュー。修正箇所と理由を箇条書き。\n\n"+draft}])
     review_text="\n".join(b.text for b in review.content if getattr(b,"type",None)=="text")
     root=pathlib.Path("drafts")/kind
     root.mkdir(parents=True,exist_ok=True)
