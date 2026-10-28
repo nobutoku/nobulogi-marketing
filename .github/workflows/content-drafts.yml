@@ -1,0 +1,41 @@
+name: Generate content draft
+on:
+  workflow_dispatch:
+    inputs:
+      content_kind:
+        description: "Draft type"
+        required: true
+        type: choice
+        options: [seo, note-free, note-paid]
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Generate and review draft
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CONTENT_KIND: ${{ inputs.content_kind }}
+        run: python scripts/generate.py
+      - name: Open draft PR (no automatic publishing)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BRANCH="draft/${{ inputs.content_kind }}-${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add drafts/
+          git commit -m "draft: ${{ inputs.content_kind }} content"
+          git push origin "$BRANCH"
+          gh pr create --draft --base main --head "$BRANCH" --title "Review: ${{ inputs.content_kind }} article" --body "AI下書きです。事実・機密・権利・SEO・有料境界を確認してください。マージだけでは記事は公開されません。"
