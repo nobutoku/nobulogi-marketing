@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NOBULOGI | 3ツール操作画面（試作）</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;color:#183441;background:#f3f8fa}*{box-sizing:border-box}body{margin:0}header{background:#103e4c;color:white;padding:22px max(20px,calc((100vw - 1000px)/2))}header h1{margin:0;font-size:24px}header p{margin:6px 0 0;color:#c7e1e4}main{max-width:1000px;margin:auto;padding:24px 18px 70px}.notice{background:#fff5d8;border:1px solid #e8c87a;padding:13px;border-radius:9px;line-height:1.7}.tabs{display:flex;flex-wrap:wrap;gap:9px;margin:24px 0}button{font:inherit;cursor:pointer;border:1px solid #a7c6ca;border-radius:8px;padding:10px 15px;background:white;color:#154f58}button[aria-selected=true],button.primary{background:#086f78;color:white;border-color:#086f78}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #54a7d8;outline-offset:2px}.panel{background:white;border:1px solid #d8e6e9;border-radius:12px;padding:24px;box-shadow:0 3px 10px #0a303509}.panel[hidden]{display:none}h2{margin-top:0}h3{margin-top:26px}label{display:block;font-size:13px;font-weight:650;margin-bottom:7px}input,select,textarea{width:100%;padding:9px;border:1px solid #b8cdd1;border-radius:7px;font:inherit;background:white;color:#183441}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:13px}.field{min-width:0}.muted{color:#506d76;font-size:13px}.result{background:#edf7f5;border-radius:8px;padding:16px;margin-top:16px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;margin-top:12px;font-size:13px}th,td{padding:9px;border:1px solid #d8e6e9;text-align:left;overflow-wrap:anywhere}th{background:#eef5f6}.scroll{overflow:auto}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}a{color:#08747c}code{font-family:ui-monospace,monospace}footer{padding:20px;text-align:center;color:#54717b;font-size:12px}@media(max-width:500px){.panel{padding:16px}}
+</style></head><body>
+<header><h1>NOBULOGI <small>TOOLS</small></h1><p>物流・EC業務をもっとシンプルに。</p></header>
+<main><div class="notice" role="status"><strong>無料デモ版（販売商品ではありません）</strong>：ログイン・STORES注文確認・有料ライセンス制御は未実装です。実際の顧客データではなくテストデータで試してください。入力したCSVはこのブラウザ内だけで処理し、サーバーへ送信しません。</div>
+<div class="tabs" role="tablist" aria-label="ツールを選択">
+<button role="tab" id="tab-inventory" aria-controls="inventory" aria-selected="true" data-tab="inventory">在庫・発注点計算</button>
+<button role="tab" id="tab-mapper" aria-controls="mapper" aria-selected="false" data-tab="mapper">CSV変換・列マッピング</button>
+<button role="tab" id="tab-compare" aria-controls="compare" aria-selected="false" data-tab="compare">CSV照合</button></div>
+<section class="panel" id="inventory" role="tabpanel" aria-labelledby="tab-inventory"><h2>在庫・発注点計算</h2><p class="muted">簡易的な定量発注の参考計算です。発注単位・MOQを考慮し、発注点以下のときに発注量を計算します。</p>
+<form id="inventory-form"><div class="grid">
+<div class="field"><label for="onhand">現在庫（個）</label><input id="onhand" type="number" min="0" step="1" value="50" required></div>
+<div class="field"><label for="allocated">引当済み（個）</label><input id="allocated" type="number" min="0" step="1" value="10" required></div>
+<div class="field"><label for="incoming">LT内入荷確定数（個）</label><input id="incoming" type="number" min="0" step="1" value="0" required></div>
+<div class="field"><label for="demand">日次平均販売数（個/日）</label><input id="demand" type="number" min="0" step="any" value="10" required></div>
+<div class="field"><label for="lead">調達LT（日）</label><input id="lead" type="number" min="0" step="any" value="5" required></div>
+<div class="field"><label for="safety">安全在庫（個）</label><input id="safety" type="number" min="0" step="1" value="20" required></div>
+<div class="field"><label for="cycle">補充サイクル（日）</label><input id="cycle" type="number" min="0" step="any" value="10" required></div>
+<div class="field"><label for="moq">MOQ（個）</label><input id="moq" type="number" min="1" step="1" value="12" required></div>
+<div class="field"><label for="multiple">発注単位（個）</label><input id="multiple" type="number" min="1" step="1" value="6" required></div>
+</div><div class="actions"><button class="primary" type="submit">計算する</button></div></form><div class="result" id="inventory-result" aria-live="polite">計算結果がここに表示されます。</div></section>
+<section class="panel" id="mapper" role="tabpanel" aria-labelledby="tab-mapper" hidden><h2>CSV変換・列マッピング</h2><p class="muted">UTF-8のCSVを読み込み、列名と列順を変更します。長い注文IDや先頭ゼロを文字列のまま保持します。Shift-JIS対応や置換ルールは次の開発段階です。</p>
+<div class="field"><label for="csvfile">CSVファイル（UTF-8 / 最大2MB）</label><input id="csvfile" type="file" accept=".csv,text/csv"></div>
+<div class="field" style="margin-top:14px"><label for="csvsample">またはサンプルCSVを入力</label><textarea id="csvsample" rows="4">注文ID,SKU,数量
+000123456789012345,ABC-01,2
+000123456789012346,ABC-02,3</textarea></div>
+<div class="actions"><button id="loadcsv" class="primary" type="button">CSVを読み込む</button></div>
+<div id="mapping-area" hidden><h3>出力列の設定</h3><p class="muted">出力列名を変更し、不要な列はチェックを外してください。行の並び順は下の順番のままです。</p><div id="mapping-fields"></div><div class="actions"><button id="convertcsv" class="primary" type="button">CSV変換・ダウンロード</button></div></div>
+<div class="result" id="mapper-result" aria-live="polite">CSVを読み込んでください。</div></section>
+<section class="panel" id="compare" role="tabpanel" aria-labelledby="tab-compare" hidden><h2>CSV照合・差分チェック</h2><p>既存のCSV照合ツールは独立して維持しています。この試作画面では既存機能を変更しません。</p><p><a href="https://github.com/nobutoku/ec-data-tools" rel="noopener noreferrer">既存ツールのソースを確認する</a></p></section>
+</main><footer>© NOBULOGI · 開発用プレビュー / 決済・認証未接続</footer>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+document.querySelectorAll('[role="tab"]').forEach(btn=>btn.addEventListener("click",()=>{
+  document.querySelectorAll('[role="tab"]').forEach(t=>t.setAttribute("aria-selected",String(t===btn)));
+  document.querySelectorAll('[role="tabpanel"]').forEach(p=>p.hidden=p.id!==btn.dataset.tab);
+  history.replaceState(null,"","#"+btn.dataset.tab);
+}));
+const selected=location.hash.slice(1);
+if(["inventory","mapper","compare"].includes(selected)) $("tab-"+selected).click();
+$("inventory-form").addEventListener("submit",e=>{
+ e.preventDefault();
+ const ids=["onhand","allocated","incoming","demand","lead","safety","cycle","moq","multiple"];
+ const v=Object.fromEntries(ids.map(id=>[id,Number($(id).value)]));
+ if(ids.some(id=>!$(id).value.trim()||!Number.isFinite(v[id])||v[id]<0)||v.moq<1||v.multiple<1||["onhand","allocated","incoming","safety","moq","multiple"].some(id=>!Number.isInteger(v[id]))){
+  $("inventory-result").textContent="入力値を確認してください。数量は非負の整数、MOQと発注単位は正の整数です。";return;
+ }
+ const available=v.onhand-v.allocated, position=available+v.incoming;
+ const point=v.demand*v.lead+v.safety, target=v.demand*(v.lead+v.cycle)+v.safety;
+ const raw=position<=point?Math.max(0,Math.ceil(target-position)):0;
+ const qty=raw?Math.ceil(Math.max(raw,v.moq)/v.multiple)*v.multiple:0;
+ $("inventory-result").textContent="利用可能在庫："+available+" 個\n在庫ポジション："+position+" 個\n発注点："+point.toFixed(2)+" 個\n目標在庫："+target.toFixed(2)+" 個\n推奨発注数："+qty+" 個"+(available<0?"\n注意：引当済み数が現在庫を超えています。":"")+"\n※単純な需要一定モデルです。季節変動・入荷遅延・販売終了日は未反映。";
+});
+function parseCSV(s){
+ const rows=[],row=[];let field="",quoted=false;
+ s=s.replace(/^\uFEFF/,"");
+ for(let i=0;i<s.length;i++){
+  const c=s[i];
+  if(quoted){if(c==='"'&&s[i+1]==='"'){field+='"';i++;}else if(c==='"'){quoted=false;}else{field+=c;}}
+  else if(c==='"'){if(field!=="")throw Error("引用符の位置が不正です");quoted=true;}
+  else if(c===","){row.push(field);field="";}
+  else if(c==="\n"||c==="\r"){if(c==="\r"&&s[i+1]==="\n")i++;row.push(field);rows.push([...row]);row.length=0;field="";}
+  else{field+=c;}
+ }
+ if(quoted)throw Error("引用符が閉じていません");
+ if(field!==""||row.length){row.push(field);rows.push([...row]);}
+ if(!rows.length||!rows[0].length||rows[0].some(x=>!x)||new Set(rows[0]).size!==rows[0].length)throw Error("ヘッダーが不正または重複しています");
+ if(rows.some(r=>r.length!==rows[0].length))throw Error("列数が一致しない行があります");
+ return rows;
+}
+function csvCell(v){let s=String(v);const t=s.trimStart();if(/^[=+@]/.test(t)||(/^[-]/.test(t)&&!/^-(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(t)))s="'"+s;return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
+let csvRows=null;
+$("loadcsv").addEventListener("click",async()=>{
+ try{
+  const f=$("csvfile").files[0];if(f&&f.size>2*1024*1024)throw Error("ファイルは2MB以下にしてください");
+  const s=f?await f.text():$("csvsample").value;
+  csvRows=parseCSV(s);if(csvRows.length>10001)throw Error("最大10000データ行までです");
+  const area=$("mapping-fields");area.replaceChildren();
+  csvRows[0].forEach((header,i)=>{
+   const wrap=document.createElement("div");wrap.className="field";wrap.style.marginBottom="12px";
+   const label=document.createElement("label");const id="target-"+i;label.htmlFor=id;label.textContent="入力列："+header;
+   const input=document.createElement("input");input.id=id;input.value=header;input.dataset.column=String(i);
+   const check=document.createElement("input");check.type="checkbox";check.checked=true;check.id="include-"+i;check.style.width="auto";
+   const cl=document.createElement("label");cl.htmlFor=check.id;cl.textContent="この列を出力";cl.style.display="inline-block";cl.style.margin="6px";
+   wrap.append(label,input,check,cl);area.append(wrap);
+  });
+  $("mapping-area").hidden=false;$("mapper-result").textContent=(csvRows.length-1)+"データ行、"+csvRows[0].length+"列を読み込みました。";
+ }catch(err){csvRows=null;$("mapping-area").hidden=true;$("mapper-result").textContent="エラー："+err.message;}
+});
+$("convertcsv").addEventListener("click",()=>{
+ if(!csvRows)return;
+ try{
+  const selected=csvRows[0].map((_,i)=>({i,name:$("target-"+i).value.trim(),enabled:$("include-"+i).checked})).filter(x=>x.enabled);
+  if(!selected.length||selected.some(x=>!x.name)||new Set(selected.map(x=>x.name)).size!==selected.length)throw Error("出力列名の空欄・重複を確認してください");
+  const output=[selected.map(x=>x.name),...csvRows.slice(1).map(row=>selected.map(x=>row[x.i]))].map(row=>row.map(csvCell).join(",")).join("\r\n")+"\r\n";
+  const blob=new Blob(["\uFEFF",output],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download="nobulogi_converted.csv";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  $("mapper-result").textContent=(csvRows.length-1)+"行を変換しました。CSVファイルを確認してください。";
+ }catch(err){$("mapper-result").textContent="エラー："+err.message;}
+});
+</script></body></html>
